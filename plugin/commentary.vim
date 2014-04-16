@@ -35,6 +35,7 @@ function! s:go(type,...) abort
   else
     let mult = 0
     let l = l.' '
+    if strlen(r) | let r = ' '.r | endif
   endif
 
   for lnum in range(lnum1,lnum2)
