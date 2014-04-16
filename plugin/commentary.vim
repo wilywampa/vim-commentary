@@ -1,6 +1,6 @@
 " commentary.vim - Comment stuff out
 " Maintainer:   Tim Pope <http://tpo.pe/>
-" Version:      1.2
+" Version:      wilywampa's fork
 " GetLatestVimScripts: 3695 1 :AutoInstall: commentary.vim
 
 if exists("g:loaded_commentary") || &cp || v:version < 700
@@ -11,7 +11,7 @@ let g:loaded_commentary = 1
 function! s:surroundings() abort
   return split(substitute(substitute(
         \ get(b:, 'commentary_format', &commentstring)
-        \ ,'\S\zs%s',' %s','') ,'%s\ze\S', '%s ', ''), '%s', 1)
+        \ ,'\S\zs%s','%s','') ,'%s\ze\S', '%s', ''), '%s', 1)
 endfunction
 
 function! s:go(type,...) abort
@@ -30,17 +30,37 @@ function! s:go(type,...) abort
     endif
   endfor
 
+  if strlen(r) > 1 && l.r !~# '\\'
+    let mult = 1
+  else
+    let mult = 0
+    let l = l.' '
+  endif
+
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
-    if strlen(r) > 2 && l.r !~# '\\'
-      let line = substitute(line,
-            \'\M'.r[0:-2].'\zs\d\*\ze'.r[-1:-1].'\|'.l[0].'\zs\d\*\ze'.l[1:-1],
-            \'\=substitute(submatch(0)+1-uncomment,"^0$\\|^-\\d*$","","")','g')
+    if mult
+      if uncomment
+        let line = substitute(line,
+            \'\M\( \)\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\) ',
+            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+        let line = substitute(line,
+            \'\M\( \)\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\) ',
+            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+      else
+        let line = substitute(line,
+            \'\M\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\)',
+            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+        let line = substitute(line,
+            \'\M\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\)',
+            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+      endif
     endif
     if uncomment
       let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[strlen(l):-strlen(r)-1]','')
     else
       let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.*\S\@<=','\=l.submatch(0).r','')
+      let line = substitute(line, '\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
     endif
     call setline(lnum,line)
   endfor
