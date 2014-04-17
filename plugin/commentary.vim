@@ -30,10 +30,8 @@ function! s:go(type,...) abort
     endif
   endfor
 
-  if strlen(r) > 1 && l.r !~# '\\'
-    let mult = 1
-  else
-    let mult = 0
+  let mult = strlen(r) > 1 && l.r !~# '\\'
+  if !mult
     let l = l.' '
     if strlen(r) | let r = ' '.r | endif
   endif
@@ -43,10 +41,10 @@ function! s:go(type,...) abort
     if mult
       if uncomment
         let line = substitute(line,
-            \'\M\( \)\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\) ',
+            \'\M\( \)\('.l[0].'\)\(\d\+\)\('.l[1:-1].'\) ',
             \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
         let line = substitute(line,
-            \'\M\( \)\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\) ',
+            \'\M\( \)\('.r[0:-2].'\)\(\d\+\)\('.r[-1:-1].'\) ',
             \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
       else
         let line = substitute(line,
@@ -58,10 +56,13 @@ function! s:go(type,...) abort
       endif
     endif
     if uncomment
-      let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[strlen(l):-strlen(r)-1]','')
+      let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
     else
-      let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.*\S\@<=','\=l.submatch(0).r','')
-      let line = substitute(line, '\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
+      let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
+      if mult
+        let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
+        let line = substitute(line,'\M \@<!'.r,' &','')
+      endif
     endif
     call setline(lnum,line)
   endfor
