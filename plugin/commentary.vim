@@ -38,33 +38,35 @@ function! s:go(type,...) abort
 
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
-    if mult
-      if uncomment
-        let line = substitute(line,
-            \'\M\( \)\('.l[0].'\)\(\d\+\)\('.l[1:-1].'\) ',
-            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
-        let line = substitute(line,
-            \'\M\( \)\('.r[0:-2].'\)\(\d\+\)\('.r[-1:-1].'\) ',
-            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
-      else
-        let line = substitute(line,
-            \'\M\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\)',
-            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
-        let line = substitute(line,
-            \'\M\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\)',
-            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
-      endif
-    endif
-    if uncomment
-      let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
-    else
-      let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
+    if line =~ '\S'
       if mult
-        let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
-        let line = substitute(line,'\M \@<!'.r,' &','')
+        if uncomment
+          let line = substitute(line,
+              \'\M\( \)\('.l[0].'\)\(\d\+\)\('.l[1:-1].'\) ',
+              \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+          let line = substitute(line,
+              \'\M\( \)\('.r[0:-2].'\)\(\d\+\)\('.r[-1:-1].'\) ',
+              \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+        else
+          let line = substitute(line,
+              \'\M\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\)',
+              \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+          let line = substitute(line,
+              \'\M\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\)',
+              \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+        endif
       endif
+      if uncomment
+        let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
+      else
+        let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
+        if mult
+          let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
+          let line = substitute(line,'\M \@<!'.r,' &','')
+        endif
+      endif
+      call setline(lnum,line)
     endif
-    call setline(lnum,line)
   endfor
   let modelines = &modelines
   try
