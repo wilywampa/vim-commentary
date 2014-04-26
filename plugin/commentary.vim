@@ -21,11 +21,16 @@ function! s:go(type,...) abort
     let [lnum1, lnum2] = [line("'["), line("']")]
   endif
 
+  while lnum1 < lnum2 && getline(lnum1) !~ '\S'
+    let lnum1 = lnum1 + 1
+  endwhile
+
   let [l, r] = s:surroundings()
   let uncomment = 2
   for lnum in range(lnum1,lnum2)
     let line = matchstr(getline(lnum),'\S.*\s\@<!')
-    if line != '' && (stridx(line,l) || line[strlen(line)-strlen(r) : -1] != r)
+    if line != '' && (stridx(line,l.' ')
+        \|| (strlen(r) && line[strlen(line)-strlen(' '.r) : -1] != ' '.r))
       let uncomment = 0
     endif
   endfor
