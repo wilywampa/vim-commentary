@@ -35,6 +35,10 @@ function! s:go(type,...) abort
     endif
   endfor
 
+  if exists('s:com') && uncomment
+    return
+  endif
+
   let mult = strlen(r) > 1 && l.r !~# '\\'
   if !mult
     let l = l.' '
@@ -102,9 +106,18 @@ function! s:textobject(inner) abort
   endif
 endfunction
 
+func! s:com()
+  if exists('s:com')
+    unlet s:com
+  else
+    let s:com = 1
+  endif
+endfunc
+
 xnoremap <silent> <Plug>Commentary     :<C-U>call <SID>go(line("'<"),line("'>"))<CR>
 nnoremap <silent> <Plug>Commentary     :<C-U>set opfunc=<SID>go<CR>g@
 nnoremap <silent> <Plug>CommentaryLine :<C-U>set opfunc=<SID>go<Bar>exe 'norm! 'v:count1.'g@_'<CR>
+nnoremap <silent> <Plug>CommentLine    :<C-U>call <SID>com()<CR>:set opfunc=<SID>go<Bar>exe 'norm! 'v:count1.'g@_'<CR>:call <SID>com()<CR>
 onoremap <silent> <Plug>Commentary        :<C-U>call <SID>textobject(0)<CR>
 nnoremap <silent> <Plug>ChangeCommentary c:<C-U>call <SID>textobject(1)<CR>
 nmap <silent> <Plug>CommentaryUndo <Plug>Commentary<Plug>Commentary
@@ -116,6 +129,7 @@ if 1 || !hasmapto('<Plug>Commentary') || maparg('gc','n') ==# ''
   nmap gcc <Plug>CommentaryLine
   nmap cgc <Plug>ChangeCommentary
   nmap gcu <Plug>Commentary<Plug>Commentary
+  nmap gco <Plug>CommentLine
 endif
 
 if maparg('\\','n') ==# '' && maparg('\','n') ==# '' && get(g:, 'commentary_map_backslash', 1)
