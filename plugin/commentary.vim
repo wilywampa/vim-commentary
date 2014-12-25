@@ -45,6 +45,15 @@ function! s:go(type,...) abort
     if strlen(r) | let r = ' '.r | endif
   endif
 
+  let min_indent = indent(lnum1)
+  let indent = matchstr(getline(lnum1), '^\s*')
+  for lnum in range(lnum1 + 1, lnum2)
+    if indent(lnum) < min_indent
+      let min_indent = indent(lnum)
+      let indent = matchstr(getline(lnum), '^\s*')
+    endif
+  endfor
+
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
     if line =~ '\S'
@@ -68,7 +77,7 @@ function! s:go(type,...) abort
       if uncomment
         let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
       else
-        let line = substitute(line,'^\%('.matchstr(getline(lnum1),'^\s*').'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
+        let line = substitute(line,'^\%('.indent.'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
         if mult
           let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
           let line = substitute(line,'\M \@<!'.r,' &','')
