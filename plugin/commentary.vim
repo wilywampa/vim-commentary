@@ -45,14 +45,13 @@ function! s:go(type,...) abort
     if strlen(r) | let r = ' '.r | endif
   endif
 
-  let min_indent = indent(lnum1)
-  let indent = matchstr(getline(lnum1), '^\s*')
-  for lnum in range(lnum1 + 1, lnum2)
-    if indent(lnum) < min_indent
+  for lnum in filter(range(lnum1, lnum2), 'nextnonblank(v:val) == v:val')
+    if !exists('min_indent') || indent(lnum) < min_indent
       let min_indent = indent(lnum)
       let indent = matchstr(getline(lnum), '^\s*')
     endif
   endfor
+  if !exists('indent') | let indent = '' | endif
 
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
