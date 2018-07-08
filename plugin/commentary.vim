@@ -138,18 +138,11 @@ func! s:com()
   endif
 endfunc
 
-func! s:com()
-  if exists('s:com')
-    unlet s:com
-  else
-    let s:com = 1
-  endif
-endfunc
-
 command! -range -bar Commentary call s:go(<line1>,<line2>)
 xnoremap <expr>   <Plug>Commentary     <SID>go()
 nnoremap <expr>   <Plug>Commentary     <SID>go()
 nnoremap <expr>   <Plug>CommentaryLine <SID>go() . '_'
+nnoremap <silent> <Plug>CommentLine       :<C-U>call <SID>com()<CR>:set opfunc=<SID>go<Bar>exe 'norm! 'v:count1.'g@_'<CR>:call <SID>com()<CR>
 onoremap <silent> <Plug>Commentary        :<C-U>call <SID>textobject(0)<CR>
 nnoremap <silent> <Plug>ChangeCommentary c:<C-U>call <SID>textobject(1)<CR>
 nmap <silent> <Plug>CommentaryUndo :echoerr "Change your <Plug>CommentaryUndo map to <Plug>Commentary<Plug>Commentary"<CR>
