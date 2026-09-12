@@ -3,7 +3,7 @@
 " Version:      wilywampa's fork
 " GetLatestVimScripts: 3695 1 :AutoInstall: commentary.vim
 
-if exists("g:loaded_commentary") || v:version < 700
+if exists("g:loaded_commentary") || v:version < 703
   finish
 endif
 let g:loaded_commentary = 1
@@ -15,10 +15,10 @@ endfunction
 
 function! s:strip_white_space(l,r,line) abort
   let [l, r] = [a:l, a:r]
-  if l[-1:] ==# ' ' && stridx(a:line,l) == -1 && stridx(a:line,l[0:-2]) == 0
+  if l[-1:] ==# ' ' && stridx(a:line . ' ', l) == -1 && stridx(a:line, l[0:-2]) == 0
     let l = l[:-2]
   endif
-  if r[0] ==# ' ' && a:line[-strlen(r):] != r && a:line[1-strlen(r):] == r[1:]
+  if r[0] ==# ' ' && (' ' . a:line)[-strlen(r)-1:] != r && a:line[-strlen(r):] == r[1:]
     let r = r[1:]
   endif
   return [l, r]
@@ -40,6 +40,7 @@ function! s:go(...) abort
 
   let [l, r] = s:surroundings()
   let uncomment = 2
+  let force_uncomment = a:0 > 2 && a:3
   for lnum in range(lnum1,lnum2)
     let line = matchstr(getline(lnum),'\S.*\s\@<!')
     let [l, r] = s:strip_white_space(l,r,line)
@@ -47,10 +48,6 @@ function! s:go(...) abort
       let uncomment = 0
     endif
   endfor
-
-  if exists('s:com') && uncomment
-    return
-  endif
 
   let mult = strlen(r) > 1 && l.r !~# '\\'
   if !mult
@@ -66,38 +63,49 @@ function! s:go(...) abort
   endfor
   if !exists('indent') | let indent = '' | endif
 
+  if get(b:, 'commentary_startofline')
+    let indent = '^'
+  endif
+
+  let lines = []
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
-    if line =~ '\S'
-      if mult
-        if uncomment
-          let line = substitute(line,
-              \'\M\( \)\('.l[0].'\)\(\d\+\)\('.l[1:-1].'\) ',
-              \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
-          let line = substitute(line,
-              \'\M\( \)\('.r[0:-2].'\)\(\d\+\)\('.r[-1:-1].'\) ',
-              \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
-        else
-          let line = substitute(line,
-              \'\M\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\)',
-              \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
-          let line = substitute(line,
-              \'\M\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\)',
-              \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
-        endif
-      endif
-      if uncomment
-        let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
-      else
-        let line = substitute(line,'^\%('.indent.'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
-        if mult
-          let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
-          let line = substitute(line,'\M \@<!'.r,' &','')
-        endif
-      endif
-      call setline(lnum,line)
+    if line !~ '\S'
+      continue
     endif
+    if mult
+      if uncomment
+        let line = substitute(line,
+            \'\M\( \)\('.l[0].'\)\(\d\+\)\('.l[1:-1].'\) ',
+            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+        let line = substitute(line,
+            \'\M\( \)\('.r[0:-2].'\)\(\d\+\)\('.r[-1:-1].'\) ',
+            \'\=submatch(2).substitute(submatch(3)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(4)','g')
+      else
+        let line = substitute(line,
+            \'\M\('.l[0].'\)\(\d\*\)\('.l[1:-1].'\)',
+            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+        let line = substitute(line,
+            \'\M\('.r[0:-2].'\)\(\d\*\)\('.r[-1:-1].'\)',
+            \'\=" ".submatch(1).substitute(submatch(2)+1-uncomment,"^0$\\|^-\\d*$","","").submatch(3)." "','g')
+      endif
+    endif
+    if force_uncomment
+      if line =~ '^\s*' . l
+        let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
+      endif
+    elseif uncomment
+      let line = substitute(line,'\S.*\s\@<!','\=submatch(0)[(strlen(l)+mult):-strlen(r)-1-mult]','')
+    else
+      let line = substitute(line,'^\%('.indent.'\|\s*\)\zs.\+','\=l.(mult?" ":"").submatch(0).(mult?" ":"").r','')
+      if mult
+        let line = substitute(line,'\M\('.l[0].'\d\+'.l[1:-1].'\|'.r[0:-2].'\d\+'.r[-1:-1].'\) \@!', '& ','g')
+        let line = substitute(line,'\M \@<!'.r,' &','')
+      endif
+    endif
+    call add(lines, line)
   endfor
+  call setline(lnum1, lines)
   let modelines = &modelines
   try
     set modelines=0
@@ -129,25 +137,16 @@ function! s:textobject(inner) abort
   endif
 endfunction
 
-func! s:com()
-  if exists('s:com')
-    unlet s:com
-  else
-    let s:com = 1
-  endif
-endfunc
-
-command! -range -bar Commentary call s:go(<line1>,<line2>)
+command! -range -bar -bang Commentary call s:go(<line1>,<line2>,<bang>0)
 xnoremap <expr>   <Plug>Commentary     <SID>go()
 nnoremap <expr>   <Plug>Commentary     <SID>go()
 nnoremap <expr>   <Plug>CommentaryLine <SID>go() . '_'
 nnoremap <silent> <Plug>CommentLine       :<C-U>call <SID>com()<CR>:set opfunc=<SID>go<Bar>exe 'norm! 'v:count1.'g@_'<CR>:call <SID>com()<CR>
 onoremap <silent> <Plug>Commentary        :<C-U>call <SID>textobject(get(v:, 'operator', '') ==# 'c')<CR>
 nnoremap <silent> <Plug>ChangeCommentary c:<C-U>call <SID>textobject(1)<CR>
-nmap <silent> <Plug>CommentaryUndo :echoerr "Change your <Plug>CommentaryUndo map to <Plug>Commentary<Plug>Commentary"<CR>
 
 if !hasmapto('<Plug>Commentary') || maparg('gc','n') ==# ''
-  xmap gc  <Plug>Commentary
+  xmap gcc <Plug>Commentary
   nmap gc  <Plug>Commentary
   omap gc  <Plug>Commentary
   nmap gcc <Plug>CommentaryLine
@@ -157,5 +156,7 @@ if !hasmapto('<Plug>Commentary') || maparg('gc','n') ==# ''
   nmap gcu <Plug>Commentary<Plug>Commentary
   nmap gco <Plug>CommentLine
 endif
+
+nmap <silent> <Plug>CommentaryUndo :echoerr "Change your <Plug>CommentaryUndo map to <Plug>Commentary<Plug>Commentary"<CR>
 
 " vim:set et sw=2:
