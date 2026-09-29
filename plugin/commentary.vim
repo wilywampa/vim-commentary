@@ -71,6 +71,7 @@ function! s:go(...) abort
   for lnum in range(lnum1,lnum2)
     let line = getline(lnum)
     if line !~ '\S'
+      call add(lines, line)
       continue
     endif
     if mult
